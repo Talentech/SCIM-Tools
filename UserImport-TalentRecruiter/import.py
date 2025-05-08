@@ -74,7 +74,7 @@ def create_or_update_user(user_data):
 
     access_level = {
         "roleId": str(user_data["Role id"]),
-        "externalDepartmentId": str(user_data["Department Id"])
+        "externalDepartmentId": str(user_data["External department id"])
     }
 
     payload = {
@@ -130,7 +130,7 @@ def process_csv(file_path, group_name):
         return
 
     with open(file_path, mode='r', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
+        reader = csv.DictReader(file, delimiter=';')
         for row in reader:
             row = {key.strip(): value.strip() for key, value in row.items()}
             if not any(row.values()):
