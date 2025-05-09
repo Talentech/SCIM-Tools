@@ -6,6 +6,7 @@ import json
 SCIM_API_URL = "https://api.talentech.io/scim/v1"
 ACCESS_TOKEN = "----YOUR-ACCESS-TOKEN-HERE----"  # Replace with your actual token
 GROUP_NAME = "Talent-Recruiter-Users"  # Puts all users in a group called Talent-Recruiter-Users
+UPDATE_EXISTING_USERS = False  # Set to False to skip existing users, True to update them
 
 HEADERS = {
     "Authorization": f"Bearer {ACCESS_TOKEN}",
@@ -105,7 +106,35 @@ def create_or_update_user(user_data):
     }
 
     if user_id:
-        print(f"User {user_data['UserName']} - {user_id} already exists - SKIPPING.")
+        if UPDATE_EXISTING_USERS:
+            patch_payload = {
+                "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                "Operations": [
+                    {
+                        "op": "Replace",
+                        "path": "urn:ietf:params:scim:schemas:extension:talentech:talentrecruiter",
+                        "value": {
+                            "schemaversion": "1.0",
+                            "schemadata": {
+                                "accessLevels": [
+                                    {
+                                        "externalDepartmentId": str(user_data["External department id"]),
+                                        "roleId": str(user_data["Role id"])
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+
+            response = requests.patch(f"{SCIM_API_URL}/Users/{user_id}", json=patch_payload, headers=HEADERS)
+            if response.status_code in [200, 204]:
+                print(f"User {user_data['UserName']} updated successfully.")
+            else:
+                print(f"Failed to update user {user_data['UserName']}: {response.text}")
+        else:
+            print(f"User {user_data['UserName']} - {user_id} already exists - SKIPPING.")
     else:
         response = requests.post(f"{SCIM_API_URL}/Users", json=payload, headers=HEADERS)
         if response.status_code in [200, 201]:
@@ -129,8 +158,8 @@ def process_csv(file_path, group_name):
         print("Aborting import due to missing group.")
         return
 
-    with open(file_path, mode='r', encoding='utf-8') as file:
-        reader = csv.DictReader(file, delimiter=';')
+    with open(file_path, mode='r', encoding='utf-8', newline='') as file:
+        reader = csv.DictReader(file, delimiter=';', quotechar='"', skipinitialspace=True)
         for row in reader:
             row = {key.strip(): value.strip() for key, value in row.items()}
             if not any(row.values()):
