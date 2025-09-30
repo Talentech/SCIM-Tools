@@ -158,8 +158,12 @@ def process_csv(file_path, group_name):
         print("Aborting import due to missing group.")
         return
 
-    with open(file_path, mode='r', encoding='utf-8', newline='') as file:
+    with open(file_path, mode='r', encoding='utf-8-sig', newline='') as file:
         reader = csv.DictReader(file, delimiter=';', quotechar='"', skipinitialspace=True)
+
+        # Sanity check for BOM header
+        print("CSV headers detected:", reader.fieldnames)
+
         for row in reader:
             row = {key.strip(): value.strip() for key, value in row.items()}
             if not any(row.values()):
